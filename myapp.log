@@ -1,0 +1,24 @@
+WARNING:__main__:Echec de la sélection de l'adresse b'A00'
+WARNING:__main__:Erreur de lecture de la réponse
+WARNING:__main__:Echec de l'écriture de la valeur FF
+WARNING:__main__:Erreur de lecture de la réponse
+WARNING:__main__:Echec de l'envoie de la commande b'G'
+WARNING:__main__:Erreur de lecture de la réponse
+WARNING:__main__:Echec de l'envoie de la commande b'R'
+WARNING:__main__:Erreur de lecture de la réponse
+INFO:__main__:FPGA connecté sur le port COM3, baud rate =  115200
+INFO:__main__:Envoi de la commande : b'A00'
+INFO:__main__:Envoi de la commande : b'WFF'
+INFO:__main__:Envoi de la commande : b'G'
+INFO:__main__:Envoi de la commande : b'R'
+INFO:__main__:FPGA connecté sur le port COM3
+INFO:__main__:FPGA connecté sur le port COM3, baud rate =  115200
+INFO:__main__:Envoi de la commande : b'A00'
+DEBUG:__main__:Commande b'A00' reçue par le FPGA, réponse OK
+INFO:__main__:Envoi de la commande : b'WFF'
+DEBUG:__main__:Commande b'WFF' reçue par le FPGA, réponse OK
+INFO:__main__:Envoi de la commande : b'G'
+DEBUG:__main__:Commande b'G' reçue par le FPGA, réponse OK
+INFO:__main__:Envoi de la commande : b'R'
+DEBUG:__main__:Commande b'R' reçue par le FPGA, réponse ffOK
+INFO:__main__:fermeture du port COM3
