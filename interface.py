@@ -2,7 +2,7 @@ import serial
 import time
 import logging
 from ascon_pcsn import demo_aead2
-
+#test git
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(filename='myapp.log', level=logging.INFO)
