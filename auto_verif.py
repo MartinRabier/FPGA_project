@@ -9,6 +9,7 @@ from ascon_pcsn import ascon_decrypt, ascon_encrypt,demo_print
 
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import collections
 
 def decrypt_cipher(line,line2,key,nonce,ad):
     key_b = bytes.fromhex(key)
@@ -30,10 +31,11 @@ def decrypt_cipher(line,line2,key,nonce,ad):
                 ("ciphertext", decrypted_cipher[:-16]), 
                 ("tag", decrypted_cipher[-16:]),  
                ])
-    decrypted =[cipher_hex]
+    decrypted =[cipher_hex[:-32]]
     with open("decrypted_cipher.csv",mode='a',newline="") as output :
             writer = csv.writer(output)
             writer.writerow(decrypted)
+    
 
 def decrypt_file(path_cipher,path_tag,key,nonce,ad):
     ciphers = open(path_cipher,"r")
@@ -44,27 +46,66 @@ def decrypt_file(path_cipher,path_tag,key,nonce,ad):
     for line1,line2 in zip(lines1,lines2) : 
          decrypt_cipher(line1,line2,key,nonce,ad)
     ciphers.close()
+    tags.close
      
-    
+def compare(path_wave,path_decrypted):
+     waves = open(path_wave,"r")
+     decrypted = open(path_decrypted,"r")
+     lines1 = waves.readlines()
+     lines2 = decrypted.readlines()
+     lenght = len(lines1)
+     cpt=0
+     for line1,line2 in zip(lines1,lines2):
+        print(type(line1),type(line2))
+        print(line1,line2)
+        if line1==line2 : 
+            print("matching format")
+            cpt+=1
+        elif cpt==lenght-1:
+            print("Files read")
+     waves.close()
+     decrypted.close()
+     if cpt==lenght-1 :
+         print("All waves are matching")
+         return True
+     else :
+         print("Some waves aren't matching")
+         return False
+     
 
 
+def plot_ECG(path):
+    waves = open(path, "r")
+    lines = waves.readlines()
+    concatenate = ""
+
+    for line in lines:
+        concatenate += line.strip()
+    try:
+        decrypted_bytes = bytes.fromhex(concatenate)
+        amplitudes = list(decrypted_bytes)
+    except ValueError as e:
+        print(f"Erreur de conversion hex -> int : {e}")
+        return
+
+    max_len = 200
+    data = collections.deque([0] * max_len, maxlen=max_len)
+
+    fig, ax = plt.subplots()
+    line, = ax.plot(list(data))
+    ax.set_ylim(-20, 300)  
+    ax.set_title("ECG en temps réel")
+
+    def update(frame):
+        if frame < len(amplitudes):
+            data.append(amplitudes[frame]) 
+            line.set_ydata(list(data))
+        return line,
 
 
-class LiveECGPlot:
-    def __init__(self, max_len=121):
-        self.data = collections.deque([0] * max_len, maxlen=max_len)
-        self.fig, self.ax = plt.subplots()
-        self.line, = self.ax.plot(list(self.data))
-        self.ax.set_ylim(0, 255)
-        self.ax.set_title("ECG Waveform")
+    ani = animation.FuncAnimation(fig, update, frames=len(amplitudes), interval=50, blit=True, cache_frame_data=False)
 
-    def update_plot(self, frame):
-        self.line.set_ydata(list(self.data))
-        return self.line,
-
-    def start(self):
-        ani = animation.FuncAnimation(self.fig, self.update_plot, interval=500, blit=True)
-        plt.show()
+    plt.show()
 
 
 if __name__ == '__main__' :
@@ -74,26 +115,10 @@ if __name__ == '__main__' :
     ad_padding = "8000"
     print(len(key),len(nonce))
 
-    decrypt_file("cipher.csv","tag.csv",key,nonce,associated_data)
+    #decrypt_file("cipher.csv","tag.csv",key,nonce,associated_data)
+    test=compare('waveform_parsed.csv','decrypted_cipher.csv')
+    plot_ECG('decrypted_cipher.csv')
     
-    '''
-    # Decrypt the ciphertext using the ASCON decryption function
-    decrypted_hex = decrypt_ascon(key, nonce, associated_data + ad_padding, ciphertext_hex)
-    logging.info(f"Decrypted hex: {decrypted_hex}")
-    
-    # Convert the decrypted hex string into decimal amplitude values (one value per byte)
-    try:
-        decrypted_bytes = bytes.fromhex(decrypted_hex)
-        amplitudes = list(decrypted_bytes)
-        logging.info(f"Amplitudes: {amplitudes}")
-    except Exception as e:
-        logging.error("Erreur lors de la conversion du hex décrypté en valeurs numériques: " + str(e))
-        amplitudes = [0] * 121
 
-    # Set up a live plot for the ECG waveform.
-    plotter = LiveECGPlot(max_len=len(amplitudes))
-    # Update the deque with the decrypted amplitudes.
-    plotter.data = collections.deque(amplitudes, maxlen=len(amplitudes))
-    # Start the live ECG plot in a separate thread (non-blocking)
-    threading.Thread(target=plotter.start, daemon=True).start()
-    '''
+
+    
