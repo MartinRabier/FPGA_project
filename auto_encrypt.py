@@ -4,10 +4,8 @@ import logging
 import collections
 import threading
 import os
+import csv
 
-#!/usr/bin/env python3
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG,
@@ -20,12 +18,11 @@ class FPGA:
         self.timeout = timeout
         self.ser = None
 
-    def read_single_0(self,path,line):
-        file = open(path, 'r')
-        
+    def read_single_0(self,line):
+        cipher=[]
+        tag=[]
         try:
             self.send_parameter("W", line)
-            #self.send_go_command() position 2
         except Exception as e:
             logging.error(f"Erreur lors de la lecture du fichier CSV: {e}")
 
@@ -51,12 +48,9 @@ class FPGA:
             logging.error(f"Erreur lors de l'envoi de la commande C: {e}")
         time.sleep(0.5)
         response = self.ser.read(self.ser.in_waiting or 1)
-        output = open("cipher.csv","wb")
-        output.write(response.hex().upper())
-        output.flush()
-        output.close()
         if response:
             ans = response.hex().upper()
+            cipher=[ans]
             logging.info(f"Réponse reçue: {ans}")
         else:
             logging.info("Aucune réponse reçue.")
@@ -72,15 +66,24 @@ class FPGA:
         response = self.ser.read(self.ser.in_waiting or 1)
         if response:
             ans = response.hex().upper()
+            tag=[ans]
             logging.info(f"Réponse reçue: {ans}")
         else:
             logging.info("Aucune réponse reçue.")
+
+        with open("cipher.csv",mode='a',newline="") as output :
+            writer = csv.writer(output)
+            writer.writerow(cipher)
+        
+        with open("tag.csv",mode="a",newline="") as output2:
+            writer2 = csv.writer(output2)
+            writer2.writerow(tag)
     
     def read_data_0(self,path):
         file = open(path, 'r')
         lines = file.readlines()
         for line in lines:
-            self.read_single_0(path,line)
+            self.read_single_0(line)
         file.close()
 
     def open_instrument(self):
@@ -184,76 +187,25 @@ class FPGA:
             logging.error("Erreur lors de la fermeture du port: " + str(e))
 
 
-# Live plotter for ECG waveform using matplotlib animation.
-class LiveECGPlot:
-    def __init__(self, max_len=121):
-        self.data = collections.deque([0] * max_len, maxlen=max_len)
-        self.fig, self.ax = plt.subplots()
-        self.line, = self.ax.plot(list(self.data))
-        self.ax.set_ylim(0, 255)
-        self.ax.set_title("ECG Waveform")
-
-    def update_plot(self, frame):
-        self.line.set_ydata(list(self.data))
-        return self.line,
-
-    def start(self):
-        ani = animation.FuncAnimation(self.fig, self.update_plot, interval=500, blit=True)
-        plt.show()
-
-
-
 # --------------------------------------------------------------------
 if __name__ == '__main__':
-    # Example encryption parameters (hex strings without spaces)
-    key = "8A55114D1CB6A9A2BE263D4D7AECAAFF"         # 16 bytes = 32 hex characters
-    nonce = "4ED0EC0B98C529B7C8CDDF37BCD0284A"         # 16 bytes
-    associated_data = "4120746F2042"               # 8 bytes
-    ad_padding = "8000"                               # padding for associated data
+    #Encryption parameter
+    key = "8A55114D1CB6A9A2BE263D4D7AECAAFF"         
+    nonce = "4ED0EC0B98C529B7C8CDDF37BCD0284A"         
+    associated_data = "4120746F2042"               
+    ad_padding = "8000"                               
 
-    # Instantiate and open the FPGA instrument
-    fpga = FPGA("COM9", 115200, timeout=1)
+    #Instantiate and create FPGA object
+    fpga = FPGA("COM10", 115200, timeout=1)
     fpga.close_instrument()
     fpga.open_instrument()
 
-    # Send encryption parameters via UART
+    #Encryption
     fpga.send_parameter("K", key)                           # Key
     fpga.send_parameter("N", nonce)                         # Nonce
     fpga.send_parameter("A", associated_data, ad_padding)   # Associated Data with padding ("80 00")
-    '''
-    fpga.send_parameter("W", line)
-    encoded = bytes.fromhex(format(ord('C') + 1, '02X'))
-    fpga.ser.write(encoded)
-    encoded = bytes.fromhex(format(ord('T') + 1, '02X'))
-    fpga.ser.write(encoded)
-    '''
-
-    #fpga.read_data("waveform_example_ecg.csv")
-    #fpga.read_single("waveform_example_ecg.csv")
-    fpga.read_data_0("waveform_example_ecg.csv")
+    fpga.read_data_0("waveform_parsed.csv")
     
-
-    '''
-    # Decrypt the ciphertext using the ASCON decryption function
-    decrypted_hex = decrypt_ascon(key, nonce, associated_data + ad_padding, ciphertext_hex)
-    logging.info(f"Decrypted hex: {decrypted_hex}")
-    
-    # Convert the decrypted hex string into decimal amplitude values (one value per byte)
-    try:
-        decrypted_bytes = bytes.fromhex(decrypted_hex)
-        amplitudes = list(decrypted_bytes)
-        logging.info(f"Amplitudes: {amplitudes}")
-    except Exception as e:
-        logging.error("Erreur lors de la conversion du hex décrypté en valeurs numériques: " + str(e))
-        amplitudes = [0] * 121
-
-    # Set up a live plot for the ECG waveform.
-    plotter = LiveECGPlot(max_len=len(amplitudes))
-    # Update the deque with the decrypted amplitudes.
-    plotter.data = collections.deque(amplitudes, maxlen=len(amplitudes))
-    # Start the live ECG plot in a separate thread (non-blocking)
-    threading.Thread(target=plotter.start, daemon=True).start()
-    '''
     # Keep the main thread alive for demonstration
     time.sleep(30)
     fpga.close_instrument()
